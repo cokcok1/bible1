@@ -98,7 +98,7 @@
 
     <!-- 右下角版本編號 -->
     <footer class="w-full text-right px-4 mt-6">
-        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.3.2</span>
+        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.3.3</span>
     </footer>
 
     <!-- JavaScript 解析器與邏輯 -->
@@ -376,7 +376,9 @@
             const entry = dbEntries[currentIndex];
             const spokenTitle = prepareSpeechText(entry.verseRef);
             const cleanScripture = prepareSpeechText(entry.scripture);
-            const cleanReflection = prepareSpeechText(entry.reflection);
+            // 結尾兩行合成同一句，避免「歡迎轉載」單獨成句時被語音引擎讀錯
+            const cleanReflection = prepareSpeechText(entry.reflection)
+                .replace(/鄭澤賢傳道\s*歡迎轉載\s*$/, '鄭澤賢傳道，歡迎轉載。');
 
             const fullText = `${spokenTitle}。${cleanScripture}。${cleanReflection}`;
 
