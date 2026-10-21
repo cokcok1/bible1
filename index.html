@@ -44,7 +44,7 @@
             <h1 class="text-lg sm:text-xl font-bold text-sky-900 tracking-wider">💧 箴言隨筆</h1>
             
             <div class="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
-                <select id="verseSelect" class="bg-sky-50 border border-sky-300 text-sky-950 text-base font-semibold rounded-lg focus:ring-sky-500 focus:border-sky-500 p-2 outline-none transition flex-grow sm:w-56">
+                <select id="verseSelect" class="bg-sky-50 border border-sky-300 text-sky-950 text-base font-semibold rounded-lg focus:ring-sky-500 focus:border-sky-500 p-2 outline-none transition flex-grow sm:w-64">
                     <option value="">載入資料庫中...</option>
                 </select>
 
@@ -66,16 +66,18 @@
         <div id="contentContainer" class="hidden space-y-6">
             <div class="zen-card rounded-2xl p-6 sm:p-8 shadow-sm">
                 <div class="flex items-center justify-between border-b border-sky-100 pb-4 mb-5">
-                    <span id="verseTitle" class="text-2xl sm:text-3xl font-bold text-sky-950 bg-sky-100/80 px-3.5 py-1 rounded-md tracking-wide"></span>
+                    <span id="verseTitle" class="text-xl sm:text-2xl font-bold text-sky-950 bg-sky-100/80 px-3.5 py-1.5 rounded-md tracking-wide"></span>
                     <div class="flex items-center gap-2">
                         <button id="prevBtn" onclick="changeVerse(-1)" class="px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed">上一段</button>
                         <button id="nextBtn" onclick="changeVerse(1)" class="px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed">下一段</button>
                     </div>
                 </div>
 
+                <!-- 智慧人說與經文區 (淺藍色框) -->
                 <div id="scriptureText" class="text-sky-950 font-bold bg-sky-50/80 p-5 rounded-xl mb-6 border-l-4 border-sky-600 shadow-sm leading-relaxed transition-all"></div>
 
-                <div id="reflectionText" class="text-gray-800 leading-relaxed text-justify transition-all"></div>
+                <!-- 分享與內文區 -->
+                <div id="reflectionText" class="text-gray-800 leading-relaxed text-justify transition-all space-y-4"></div>
 
                 <div class="mt-8 pt-4 border-t border-sky-100 flex flex-wrap items-center justify-between gap-3 bg-sky-50/40 p-4 rounded-xl">
                     <div class="flex items-center gap-2">
@@ -105,10 +107,10 @@
         let fontSizeLevel = parseInt(localStorage.getItem('fontSizeLevel_proverbs')) || 2;
         
         const fontScaleConfigs = [
+            { scripture: 'text-base sm:text-lg', reflection: 'text-sm sm:text-base' },
             { scripture: 'text-lg sm:text-xl', reflection: 'text-base sm:text-lg' },
             { scripture: 'text-xl sm:text-2xl', reflection: 'text-lg sm:text-xl' },
-            { scripture: 'text-2xl sm:text-3xl', reflection: 'text-xl sm:text-2xl' },
-            { scripture: 'text-3xl sm:text-4xl', reflection: 'text-2xl sm:text-3xl' }
+            { scripture: 'text-2xl sm:text-3xl', reflection: 'text-xl sm:text-2xl' }
         ];
 
         let synth = window.speechSynthesis;
@@ -125,61 +127,53 @@
                 console.error(error);
                 document.getElementById('loadingIndicator').innerHTML = `
                     <p class="text-red-500 font-medium">無法自動載入「箴言隨筆.txt」檔案。</p>
-                    <p class="text-xs text-gray-500 mt-2">請確保檔案放在同一個目錄下。</p>
+                    <p class="text-xs text-gray-500 mt-2">請確保「箴言隨筆.txt」檔案與 index.html 放在同一個目錄下。</p>
                 `;
             }
         });
 
         function parseDatabase(text) {
-            const separator = text.includes('【箴言隨筆】') ? '【箴言隨筆】' : (text.includes('【週五隨筆。箴言】') ? '【週五隨筆。箴言】' : '【');
-            const rawSections = text.split(separator);
+            // 以數字加右括號（例如 "298）" 或 "1）"）作為每一篇的分隔基準
+            const rawSections = text.split(/(?=\d+）)/);
             dbEntries = [];
 
             rawSections.forEach(section => {
                 const trimmed = section.trim();
                 if (!trimmed) return;
 
-                const rawLines = trimmed.split('\n');
-                let verseRef = "";
-                let contentStartIndex = 0;
-                for (let i = 0; i < rawLines.length; i++) {
-                    if (rawLines[i].trim().length > 0) {
-                        verseRef = rawLines[i].trim().replace(/^】/, '');
-                        contentStartIndex = i + 1;
-                        break;
-                    }
-                }
+                const lines = trimmed.split('\n');
+                const firstLine = lines[0].trim();
+                
+                // 提取編號與標題 (例如 "298）")
+                const matchIndex = firstLine.match(/^(\d+）)/);
+                if (!matchIndex) return;
 
-                if (!verseRef) return;
+                let entryTitle = firstLine;
+                let bodyLines = lines.slice(1);
 
-                const bodyLines = rawLines.slice(contentStartIndex);
+                // 從內文中找出經文位置（通常包含「智慧人說：」或「箴言」）
                 let scriptureLines = [];
                 let reflectionLines = [];
-                let isReflection = false;
+                let foundSharing = false;
 
                 for (let line of bodyLines) {
-                    if (line.includes('＊歡迎轉載')) continue;
-                    if (line.includes('……………………')) {
-                        isReflection = true;
+                    if (line.includes('【分享】')) {
+                        foundSharing = true;
                         continue;
                     }
 
-                    if (!isReflection) {
-                        if (line.trim().startsWith('*') || line.trim().endsWith('*') || scriptureLines.length === 0) {
-                            scriptureLines.push(line);
-                        } else {
-                            isReflection = true;
-                            reflectionLines.push(line);
-                        }
+                    if (!foundSharing) {
+                        scriptureLines.push(line);
                     } else {
                         reflectionLines.push(line);
                     }
                 }
 
+                // 如果文字中剛好沒有寫【分享】標籤，則自動以「智慧人說」之後到「【分享】」前的範圍為經文
                 dbEntries.push({
-                    title: verseRef,
-                    scripture: scriptureLines.join('\n'),
-                    reflection: reflectionLines.join('\n')
+                    title: entryTitle,
+                    scripture: scriptureLines.join('\n').trim(),
+                    reflection: reflectionLines.join('\n').trim()
                 });
             });
 
@@ -195,7 +189,7 @@
                 document.getElementById('loadingIndicator').classList.add('hidden');
                 document.getElementById('contentContainer').classList.remove('hidden');
             } else {
-                document.getElementById('loadingIndicator').innerHTML = `<p class="text-red-500">解析檔案失敗，未找到有效內容。</p>`;
+                document.getElementById('loadingIndicator').innerHTML = `<p class="text-red-500">解析檔案失敗，未找到有效內容，請檢查格式是否包含「298）」等編號。</p>`;
             }
         }
 
@@ -225,16 +219,16 @@
             document.getElementById('verseTitle').textContent = dbEntries[index].title;
 
             const entry = dbEntries[index];
-            const cleanScripture = entry.scripture.replace(/\*/g, '');
-            
             const currentConfig = fontScaleConfigs[fontSizeLevel];
             
+            // 經文區（淺藍色框）
             const scriptureEl = document.getElementById('scriptureText');
             scriptureEl.className = `text-sky-950 font-bold bg-sky-50/80 p-5 rounded-xl mb-6 border-l-4 border-sky-600 shadow-sm leading-relaxed transition-all ${currentConfig.scripture}`;
-            scriptureEl.innerHTML = formatParagraphs(cleanScripture);
+            scriptureEl.innerHTML = formatParagraphs(entry.scripture);
 
+            // 分享與心得區
             const reflectionEl = document.getElementById('reflectionText');
-            reflectionEl.className = `text-gray-800 leading-relaxed text-justify transition-all ${currentConfig.reflection}`;
+            reflectionEl.className = `text-gray-800 leading-relaxed text-justify transition-all space-y-4 ${currentConfig.reflection}`;
             reflectionEl.innerHTML = formatParagraphs(entry.reflection);
 
             document.getElementById('prevBtn').disabled = currentIndex === 0;
@@ -270,19 +264,12 @@
             }
         }
 
+        // 轉換標題讀音以配合 Siri 廣東話朗讀
         function formatTitleForSpeech(title) {
-            const clean = title.trim();
-            const rangeMatch = clean.match(/^箴(\d+):(\d+)-(\d+)$/);
-            if (rangeMatch) {
-                return `箴言第${rangeMatch[1]}章第${rangeMatch[2]}至第${rangeMatch[3]}節`;
-            }
-            const singleMatch = clean.match(/^箴(\d+):(\d+)$/);
-            if (singleMatch) {
-                return `箴言第${singleMatch[1]}章第${singleMatch[2]}節`;
-            }
-            return clean.replace(/^箴/, '箴言');
+            return title.replace('）', '第').replace(/箴言\s*(\d+):(\d+)/, '箴言第$1章第$2節');
         }
 
+        // 啟動朗讀
         function toggleSpeech() {
             if (isPlaying) {
                 stopSpeech();
@@ -294,8 +281,11 @@
             const entry = dbEntries[currentIndex];
             const spokenTitle = formatTitleForSpeech(entry.title);
             
-            const fullText = `${spokenTitle}。${entry.scripture}。${entry.reflection}`
-                .replace(/\*/g, '')
+            const fullText = `${spokenTitle}。${entry.scripture}。分享。${entry.reflection}`
+                .replace(/【分享】/g, '')
+                .replace(/【朋友】/g, '朋友話：')
+                .replace(/【註】/g, '註解：')
+                .replace(/[*「」『』]/g, '')
                 .replace(/<[^>]*>/g, '');
 
             speechQueue = fullText.match(/[^。！？\n]+[。！？\n]*/g) || [fullText];
