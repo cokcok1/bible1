@@ -1,474 +1,351 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>週五隨筆</title>
-  
-  <!-- App Icon 設定 -->
-  <link rel="icon" type="image/png" href="icon.png">
-  <link rel="apple-touch-icon" href="icon.png">
-  
-  <style>
-    :root {
-      /* 淺藍色主題配色 */
-      --primary-blue: #3b82f6;
-      --primary-light: #e0f2fe;
-      --primary-border: #bae6fd;
-      --primary-dark: #1d4ed8;
-      --bg-color: #f8fafc;
-      --card-bg: #ffffff;
-      --text-main: #1e293b;
-      --text-sub: #475569;
-      --quote-bg: #f0f9ff;
-      --quote-border: #0284c7;
-      --btn-bg: #f0f9ff;
-      --btn-text: #0369a1;
-      --btn-hover: #e0f2fe;
-      --base-font-size: 18px;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>箴言隨筆 - 閱讀資料庫</title>
+    
+    <!-- PWA / 手機安裝支援設定 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2b6cb0">
+    
+    <!-- iOS (iPhone/iPad) 專用安裝支援 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="箴言隨筆">
+    <link rel="apple-touch-icon" href="icon.png">
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang TC", "Meiryo", sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      padding: 12px;
-      font-size: var(--base-font-size);
-    }
-
-    /* 頂部固定區域 */
-    .header-container {
-      width: 100%;
-      max-width: 500px;
-      margin-bottom: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .app-title {
-      text-align: center;
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      margin-top: 4px;
-    }
-
-    .top-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-    }
-
-    /* 下拉選單 */
-    .chapter-select {
-      flex: 1;
-      padding: 8px 12px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #0369a1;
-      background-color: var(--primary-light);
-      border: 1px solid var(--primary-border);
-      border-radius: 12px;
-      outline: none;
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230369a1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-      background-repeat: no-repeat;
-      background-position: right 10px center;
-      background-size: 16px;
-      padding-right: 32px;
-    }
-
-    /* 字體控制與朗讀按鈕群組 */
-    .font-controls {
-      display: flex;
-      align-items: center;
-      background-color: var(--primary-light);
-      border: 1px solid var(--primary-border);
-      border-radius: 12px;
-      padding: 2px 6px;
-      gap: 2px;
-    }
-
-    .font-label {
-      font-size: 0.8rem;
-      color: #0369a1;
-      font-weight: 600;
-      margin-right: 2px;
-      padding-left: 4px;
-    }
-
-    .btn-small {
-      background: #ffffff;
-      border: 1px solid var(--primary-border);
-      color: #0369a1;
-      border-radius: 8px;
-      padding: 4px 8px;
-      font-size: 0.85rem;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .btn-small:active {
-      background-color: var(--btn-hover);
-    }
-
-    /* 主卡片區域 */
-    .card {
-      width: 100%;
-      max-width: 500px;
-      background: var(--card-bg);
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-      border: 1px solid #f1f5f9;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      position: relative;
-      margin-bottom: 30px;
-    }
-
-    /* 卡片頂部導覽 (章節標籤 + 上/下一段) */
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .chapter-tag {
-      background-color: var(--primary-light);
-      color: #0369a1;
-      font-weight: 800;
-      font-size: 1.15rem;
-      padding: 6px 14px;
-      border-radius: 10px;
-      letter-spacing: 0.5px;
-    }
-
-    .nav-buttons {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn-nav {
-      background-color: #f1f5f9;
-      border: none;
-      color: var(--text-sub);
-      padding: 6px 12px;
-      border-radius: 10px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-nav:active {
-      background-color: var(--primary-light);
-      color: #0369a1;
-    }
-
-    /* 經文引言區塊 */
-    .quote-box {
-      background-color: var(--quote-bg);
-      border-left: 5px solid var(--quote-border);
-      border-radius: 0 14px 14px 0;
-      padding: 16px 18px;
-      font-weight: 700;
-      line-height: 1.6;
-      color: #0f172a;
-      font-size: 1.05em;
-    }
-
-    /* 心得正文區塊 */
-    .content-box {
-      color: var(--text-main);
-      line-height: 1.75;
-      font-weight: 400;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .content-box p {
-      word-break: break-word;
-    }
-
-    /* 朗讀控制底欄 */
-    .audio-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background-color: var(--quote-bg);
-      border: 1px solid var(--primary-border);
-      padding: 8px 14px;
-      border-radius: 12px;
-      margin-top: 8px;
-    }
-
-    .audio-btn {
-      background-color: var(--primary-blue);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-
-    .audio-status {
-      font-size: 0.85rem;
-      color: #0369a1;
-      font-weight: 600;
-    }
-
-    /* 右下角版本號 (極淺色) */
-    .version-tag {
-      position: fixed;
-      bottom: 6px;
-      right: 10px;
-      font-size: 0.7rem;
-      color: #cbd5e1; /* 非常淺的灰色/藍灰色 */
-      font-family: monospace;
-      user-select: none;
-      pointer-events: none;
-    }
-  </style>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif;
+            background-color: #f0f7ff;
+            color: #1a365d;
+        }
+        .zen-card {
+            background: #ffffff;
+            border: 1px solid #d0e1fd;
+        }
+        .paragraph-block {
+            margin-bottom: 1.25rem;
+            line-height: 1.8;
+        }
+        .paragraph-block:last-child {
+            margin-bottom: 0;
+        }
+    </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col justify-between pb-10">
 
-  <div class="header-container">
-    <!-- 頂部標題 -->
-    <div class="app-title">
-      🌿 週五隨筆 · 傳道書
-    </div>
+    <!-- 頂部導航與選擇器 -->
+    <header class="w-full bg-white shadow-sm border-b border-sky-100 sticky top-0 z-50">
+        <div class="max-w-3xl mx-auto px-4 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <h1 class="text-lg sm:text-xl font-bold text-sky-900 tracking-wider">💧 箴言隨筆</h1>
+            
+            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+                <select id="verseSelect" class="bg-sky-50 border border-sky-300 text-sky-950 text-base font-semibold rounded-lg focus:ring-sky-500 focus:border-sky-500 p-2 outline-none transition flex-grow sm:w-56">
+                    <option value="">載入資料庫中...</option>
+                </select>
 
-    <!-- 控制列：下拉選單 + 字體縮放 -->
-    <div class="top-controls">
-      <select id="chapterSelect" class="chapter-select" onchange="changeChapter(this.value)">
-        <!-- 由 JavaScript 動態生成選項 -->
-      </select>
+                <div class="flex items-center gap-1 bg-sky-50 border border-sky-300 rounded-lg p-1 shrink-0">
+                    <span class="text-xs text-sky-800 px-1 font-bold">字體</span>
+                    <button onclick="changeFontSize(-1)" class="w-7 h-7 bg-white hover:bg-sky-100 text-sky-950 rounded font-bold text-xs shadow-sm transition flex items-center justify-center" title="縮小字體">A-</button>
+                    <button onclick="changeFontSize(1)" class="w-7 h-7 bg-white hover:bg-sky-100 text-sky-950 rounded font-bold text-xs shadow-sm transition flex items-center justify-center" title="放大字體">A+</button>
+                </div>
+            </div>
+        </div>
+    </header>
 
-      <div class="font-controls">
-        <span class="font-label">字體</span>
-        <button class="btn-small" onclick="adjustFontSize(-1)">A-</button>
-        <button class="btn-small" onclick="adjustFontSize(1)">A+</button>
-      </div>
-    </div>
-  </div>
+    <!-- 主要內容區 -->
+    <main class="max-w-3xl w-full mx-auto px-4 mt-6 flex-grow">
+        <div id="loadingIndicator" class="text-center py-20 text-sky-700">
+            <p class="text-base animate-pulse">正在從文字檔案讀取資料庫...</p>
+        </div>
 
-  <!-- 主要文章卡片 -->
-  <div class="card">
-    <div class="card-header">
-      <div class="chapter-tag" id="displayChapterTag">傳2:15-17</div>
-      <div class="nav-buttons">
-        <button class="btn-nav" onclick="prevChapter()">上一段</button>
-        <button class="btn-nav" onclick="nextChapter()">下一段</button>
-      </div>
-    </div>
+        <div id="contentContainer" class="hidden space-y-6">
+            <div class="zen-card rounded-2xl p-6 sm:p-8 shadow-sm">
+                <div class="flex items-center justify-between border-b border-sky-100 pb-4 mb-5">
+                    <span id="verseTitle" class="text-2xl sm:text-3xl font-bold text-sky-950 bg-sky-100/80 px-3.5 py-1 rounded-md tracking-wide"></span>
+                    <div class="flex items-center gap-2">
+                        <button id="prevBtn" onclick="changeVerse(-1)" class="px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed">上一段</button>
+                        <button id="nextBtn" onclick="changeVerse(1)" class="px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed">下一段</button>
+                    </div>
+                </div>
 
-    <!-- 經文區塊 -->
-    <div class="quote-box" id="displayQuote">
-      <!-- 經文內容 -->
-    </div>
+                <div id="scriptureText" class="text-sky-950 font-bold bg-sky-50/80 p-5 rounded-xl mb-6 border-l-4 border-sky-600 shadow-sm leading-relaxed transition-all"></div>
 
-    <!-- 心得正文區塊 -->
-    <div class="content-box" id="displayContent">
-      <!-- 心得內容 -->
-    </div>
+                <div id="reflectionText" class="text-gray-800 leading-relaxed text-justify transition-all"></div>
 
-    <!-- Siri 風格朗讀控制列 -->
-    <div class="audio-bar">
-      <div class="audio-status" id="speechStatus">🔊 語音朗讀</div>
-      <button class="audio-btn" id="playBtn" onclick="toggleSpeech()">▶</button>
-    </div>
-  </div>
+                <div class="mt-8 pt-4 border-t border-sky-100 flex flex-wrap items-center justify-between gap-3 bg-sky-50/40 p-4 rounded-xl">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-sky-900 font-semibold tracking-wide">廣東話朗讀 (Siri 聲音風格)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="playBtn" onclick="toggleSpeech()" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition flex items-center gap-1.5">
+                            <svg id="playIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span id="playText">聆聽整段</span>
+                        </button>
+                        <button onclick="stopSpeech()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-xl text-sm font-medium transition">停止</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 
-  <!-- 右下角極淺色版本號 -->
-  <div class="version-tag">v1.0.0</div>
+    <!-- 右下角極細版本編號 -->
+    <footer class="w-full text-right px-4 mt-6">
+        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.0.0</span>
+    </footer>
 
-  <script>
-    // 文章資料庫（可自行擴充/替換內容）
-    const articles = [
-      {
-        id: "傳2:15-17",
-        tag: "傳2:15-17",
-        quote: "我心裡說：「臨到愚昧人身上的，也必臨到我身上；那麼，我為什麼要更有智慧呢？」於是我心裡說：「這也是虛空。」",
-        content: [
-          "因為智慧人和愚昧人一樣，沒有人永遠紀念他們，在未來的日子裡，都會被人遺忘。可歎智慧人跟愚昧人一樣，終必死亡。",
-          "因此我恨惡生命，因為在日光之下所發生的事，都使我厭煩。一切都是虛空，都是捕風。"
-        ]
-      },
-      {
-        id: "傳3:1-4",
-        tag: "傳3:1-4",
-        quote: "凡事都有定期，天下萬物都有定時。生有時，死有時；栽種有時，拔出所栽種的也有時。",
-        content: [
-          "殺戮有時，醫治有時；拆毀有時，建造有時；哭有時，笑有時；哀慟有時，跳舞有時。",
-          "人生中的每個階段與際遇都有神的定時與美意，學會順應與珍惜當下，便能體會生命的安息與智慧。"
-        ]
-      },
-      {
-        id: "傳4:9-10",
-        tag: "傳4:9-10",
-        quote: "兩個人總比一個人好，因為二人勞碌同得美好的果效。若是跌倒，一人分能扶起他的同伴。",
-        content: [
-          "若孤身一人跌倒，沒有別人扶起他，這人就有禍了！夥伴之間的相扶相持，能讓人在困境中獲得溫暖與重新站立的力量。"
-        ]
-      }
-    ];
+    <!-- JavaScript 解析器與邏輯 -->
+    <script>
+        let dbEntries = [];
+        let currentIndex = 0;
+        let fontSizeLevel = parseInt(localStorage.getItem('fontSizeLevel_proverbs')) || 2;
+        
+        const fontScaleConfigs = [
+            { scripture: 'text-lg sm:text-xl', reflection: 'text-base sm:text-lg' },
+            { scripture: 'text-xl sm:text-2xl', reflection: 'text-lg sm:text-xl' },
+            { scripture: 'text-2xl sm:text-3xl', reflection: 'text-xl sm:text-2xl' },
+            { scripture: 'text-3xl sm:text-4xl', reflection: 'text-2xl sm:text-3xl' }
+        ];
 
-    let currentIndex = 0;
-    let currentFontSize = 18; // 預設字體大小
-    let synth = window.speechSynthesis;
-    let utterance = null;
-    let isSpeaking = false;
+        let synth = window.speechSynthesis;
+        let speechQueue = [];
+        let isPlaying = false;
 
-    // 初始化頁面
-    window.onload = function() {
-      initDropdown();
-      renderArticle(0);
-    };
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('箴言隨筆.txt');
+                if (!response.ok) throw new Error('無法讀取資料庫檔案');
+                const rawText = await response.text();
+                parseDatabase(rawText);
+            } catch (error) {
+                console.error(error);
+                document.getElementById('loadingIndicator').innerHTML = `
+                    <p class="text-red-500 font-medium">無法自動載入「箴言隨筆.txt」檔案。</p>
+                    <p class="text-xs text-gray-500 mt-2">請確保檔案放在同一個目錄下。</p>
+                `;
+            }
+        });
 
-    // 初始化下拉選單
-    function initDropdown() {
-      const select = document.getElementById('chapterSelect');
-      select.innerHTML = '';
-      articles.forEach((item, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = item.tag;
-        select.appendChild(option);
-      });
-    }
+        function parseDatabase(text) {
+            const separator = text.includes('【箴言隨筆】') ? '【箴言隨筆】' : (text.includes('【週五隨筆。箴言】') ? '【週五隨筆。箴言】' : '【');
+            const rawSections = text.split(separator);
+            dbEntries = [];
 
-    // 渲染文章內容
-    function renderArticle(index) {
-      stopSpeech(); // 切換文章時停止朗讀
+            rawSections.forEach(section => {
+                const trimmed = section.trim();
+                if (!trimmed) return;
 
-      currentIndex = index;
-      const item = articles[currentIndex];
+                const rawLines = trimmed.split('\n');
+                let verseRef = "";
+                let contentStartIndex = 0;
+                for (let i = 0; i < rawLines.length; i++) {
+                    if (rawLines[i].trim().length > 0) {
+                        verseRef = rawLines[i].trim().replace(/^】/, '');
+                        contentStartIndex = i + 1;
+                        break;
+                    }
+                }
 
-      document.getElementById('chapterSelect').value = currentIndex;
-      document.getElementById('displayChapterTag').textContent = item.tag;
-      document.getElementById('displayQuote').textContent = item.quote;
+                if (!verseRef) return;
 
-      const contentBox = document.getElementById('displayContent');
-      contentBox.innerHTML = '';
-      item.content.forEach(paragraph => {
-        const p = document.createElement('p');
-        p.textContent = paragraph;
-        contentBox.appendChild(p);
-      });
-    }
+                const bodyLines = rawLines.slice(contentStartIndex);
+                let scriptureLines = [];
+                let reflectionLines = [];
+                let isReflection = false;
 
-    // 切換章節
-    function changeChapter(index) {
-      renderArticle(parseInt(index));
-    }
+                for (let line of bodyLines) {
+                    if (line.includes('＊歡迎轉載')) continue;
+                    if (line.includes('……………………')) {
+                        isReflection = true;
+                        continue;
+                    }
 
-    function prevChapter() {
-      if (currentIndex > 0) {
-        renderArticle(currentIndex - 1);
-      }
-    }
+                    if (!isReflection) {
+                        if (line.trim().startsWith('*') || line.trim().endsWith('*') || scriptureLines.length === 0) {
+                            scriptureLines.push(line);
+                        } else {
+                            isReflection = true;
+                            reflectionLines.push(line);
+                        }
+                    } else {
+                        reflectionLines.push(line);
+                    }
+                }
 
-    function nextChapter() {
-      if (currentIndex < articles.length - 1) {
-        renderArticle(currentIndex + 1);
-      }
-    }
+                dbEntries.push({
+                    title: verseRef,
+                    scripture: scriptureLines.join('\n'),
+                    reflection: reflectionLines.join('\n')
+                });
+            });
 
-    // 字體大小調整
-    function adjustFontSize(delta) {
-      currentFontSize += delta * 2;
-      // 限制字體範圍 14px - 26px
-      if (currentFontSize < 14) currentFontSize = 14;
-      if (currentFontSize > 26) currentFontSize = 26;
+            if (dbEntries.length > 0) {
+                populateSelector();
+                
+                let savedIndex = parseInt(localStorage.getItem('lastReadIndex_proverbs'));
+                if (isNaN(savedIndex) || savedIndex < 0 || savedIndex >= dbEntries.length) {
+                    savedIndex = 0;
+                }
+                
+                displayEntry(savedIndex);
+                document.getElementById('loadingIndicator').classList.add('hidden');
+                document.getElementById('contentContainer').classList.remove('hidden');
+            } else {
+                document.getElementById('loadingIndicator').innerHTML = `<p class="text-red-500">解析檔案失敗，未找到有效內容。</p>`;
+            }
+        }
 
-      document.body.style.setProperty('--base-font-size', currentFontSize + 'px');
-    }
+        function populateSelector() {
+            const select = document.getElementById('verseSelect');
+            select.innerHTML = '';
+            dbEntries.forEach((entry, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${entry.title}`;
+                option.className = "font-semibold";
+                select.appendChild(option);
+            });
 
-    // Siri 風格語音朗讀 (TTS)
-    function toggleSpeech() {
-      if (isSpeaking) {
-        stopSpeech();
-      } else {
-        startSpeech();
-      }
-    }
+            select.addEventListener('change', (e) => {
+                stopSpeech();
+                currentIndex = parseInt(e.target.value);
+                displayEntry(currentIndex);
+            });
+        }
 
-    function startSpeech() {
-      if (!synth) {
-        alert('您的瀏覽器不支援語音朗讀功能。');
-        return;
-      }
+        function displayEntry(index) {
+            currentIndex = index;
+            localStorage.setItem('lastReadIndex_proverbs', currentIndex);
 
-      const item = articles[currentIndex];
-      const fullText = item.quote + "。" + item.content.join(" ");
+            document.getElementById('verseSelect').value = index;
+            document.getElementById('verseTitle').textContent = dbEntries[index].title;
 
-      utterance = new SpeechSynthesisUtterance(fullText);
-      utterance.rate = 0.95; // 接近自然說話語速
-      utterance.pitch = 1.0;
+            const entry = dbEntries[index];
+            const cleanScripture = entry.scripture.replace(/\*/g, '');
+            
+            const currentConfig = fontScaleConfigs[fontSizeLevel];
+            
+            const scriptureEl = document.getElementById('scriptureText');
+            scriptureEl.className = `text-sky-950 font-bold bg-sky-50/80 p-5 rounded-xl mb-6 border-l-4 border-sky-600 shadow-sm leading-relaxed transition-all ${currentConfig.scripture}`;
+            scriptureEl.innerHTML = formatParagraphs(cleanScripture);
 
-      // 優先尋找 iOS/macOS 的 Cantonese (廣東話) 或 Mandarin (中文) Siri 語音
-      const voices = synth.getVoices();
-      let selectedVoice = voices.find(v => v.lang.includes('zh-HK') || v.lang.includes('yue')) 
-                       || voices.find(v => v.lang.includes('zh-TW'))
-                       || voices.find(v => v.lang.includes('zh'));
+            const reflectionEl = document.getElementById('reflectionText');
+            reflectionEl.className = `text-gray-800 leading-relaxed text-justify transition-all ${currentConfig.reflection}`;
+            reflectionEl.innerHTML = formatParagraphs(entry.reflection);
 
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-      }
+            document.getElementById('prevBtn').disabled = currentIndex === 0;
+            document.getElementById('nextBtn').disabled = currentIndex === dbEntries.length - 1;
 
-      utterance.onstart = function() {
-        isSpeaking = true;
-        document.getElementById('playBtn').textContent = '❚❚';
-        document.getElementById('speechStatus').textContent = '🎙️ 朗讀中...';
-      };
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
-      utterance.onend = function() {
-        stopSpeech();
-      };
+        function changeFontSize(direction) {
+            fontSizeLevel += direction;
+            if (fontSizeLevel < 0) fontSizeLevel = 0;
+            if (fontSizeLevel >= fontScaleConfigs.length) fontSizeLevel = fontScaleConfigs.length - 1;
+            
+            localStorage.setItem('fontSizeLevel_proverbs', fontSizeLevel);
+            displayEntry(currentIndex);
+        }
 
-      utterance.onerror = function() {
-        stopSpeech();
-      };
+        function formatParagraphs(text) {
+            const paragraphs = text.split(/\n\s*\n/);
+            return paragraphs
+                .map(p => {
+                    const cleanP = p.trim().replace(/\n/g, '<br>');
+                    return cleanP ? `<p class="paragraph-block">${cleanP}</p>` : '';
+                })
+                .join('');
+        }
 
-      synth.speak(utterance);
-    }
+        function changeVerse(direction) {
+            stopSpeech();
+            const newIndex = currentIndex + direction;
+            if (newIndex >= 0 && newIndex < dbEntries.length) {
+                displayEntry(newIndex);
+            }
+        }
 
-    function stopSpeech() {
-      if (synth && synth.speaking) {
-        synth.cancel();
-      }
-      isSpeaking = false;
-      const playBtn = document.getElementById('playBtn');
-      const speechStatus = document.getElementById('speechStatus');
-      if (playBtn) playBtn.textContent = '▶';
-      if (speechStatus) speechStatus.textContent = '🔊 語音朗讀';
-    }
-  </script>
+        function formatTitleForSpeech(title) {
+            const clean = title.trim();
+            const rangeMatch = clean.match(/^箴(\d+):(\d+)-(\d+)$/);
+            if (rangeMatch) {
+                return `箴言第${rangeMatch[1]}章第${rangeMatch[2]}至第${rangeMatch[3]}節`;
+            }
+            const singleMatch = clean.match(/^箴(\d+):(\d+)$/);
+            if (singleMatch) {
+                return `箴言第${singleMatch[1]}章第${singleMatch[2]}節`;
+            }
+            return clean.replace(/^箴/, '箴言');
+        }
+
+        function toggleSpeech() {
+            if (isPlaying) {
+                stopSpeech();
+                return;
+            }
+
+            stopSpeech();
+
+            const entry = dbEntries[currentIndex];
+            const spokenTitle = formatTitleForSpeech(entry.title);
+            
+            const fullText = `${spokenTitle}。${entry.scripture}。${entry.reflection}`
+                .replace(/\*/g, '')
+                .replace(/<[^>]*>/g, '');
+
+            speechQueue = fullText.match(/[^。！？\n]+[。！？\n]*/g) || [fullText];
+
+            isPlaying = true;
+            document.getElementById('playText').textContent = '停止朗讀';
+            playNextChunk();
+        }
+
+        function playNextChunk() {
+            if (!isPlaying) return;
+
+            if (speechQueue.length === 0) {
+                stopSpeech();
+                return;
+            }
+
+            const chunk = speechQueue.shift();
+            const utterance = new SpeechSynthesisUtterance(chunk);
+            utterance.lang = 'zh-HK';
+            utterance.rate = 1.0;
+
+            const voices = synth.getVoices();
+            const hkVoice = voices.find(v => v.lang === 'zh-HK' && (v.name.includes('Sin-ji') || v.name.includes('HiuMaan') || v.name.includes('Female') || v.name.includes('女')));
+            if (hkVoice) {
+                utterance.voice = hkVoice;
+            }
+
+            utterance.onend = () => {
+                playNextChunk();
+            };
+
+            utterance.onerror = () => {
+                stopSpeech();
+            };
+
+            synth.speak(utterance);
+        }
+
+        function stopSpeech() {
+            isPlaying = false;
+            speechQueue = [];
+            if (synth) {
+                synth.cancel();
+            }
+            const playTextEl = document.getElementById('playText');
+            if (playTextEl) {
+                playTextEl.textContent = '聆聽整段';
+            }
+        }
+    </script>
 </body>
 </html>
