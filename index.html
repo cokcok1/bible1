@@ -98,7 +98,7 @@
 
     <!-- 右下角版本編號 -->
     <footer class="w-full text-right px-4 mt-6">
-        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.3.0</span>
+        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.3.1</span>
     </footer>
 
     <!-- JavaScript 解析器與邏輯 -->
@@ -134,7 +134,7 @@
         });
 
         function parseDatabase(text) {
-            const sections = text.split(/\n(?=\d+[）\)]\s*)/);
+            const sections = text.split(/\n(?=\d+[）\)][ \t]*\r?\n)/)  // 只在「單獨一行的編號」處分段，避免把內文裡的 1）2）3）清單當成新篇;
             dbEntries = [];
 
             sections.forEach(sec => {
@@ -149,8 +149,9 @@
 
                 const fullBody = lines.slice(1).join('\n');
 
-                let refMatch = fullBody.match(/[（—–-]\s*(箴言\s*\d+:\d+(?:-\d+)?)\s*[）)]?/);
-                let verseRef = refMatch ? refMatch[1] : `箴言 (第${entryNum}篇)`;
+                // 經文出處：支援 1:10-11,13-14 / 9:15, 17-18 等多段寫法
+                let refMatch = fullBody.match(/[（—–-]\s*(箴言\s*\d+\s*:\s*\d+(?:\s*[-–]\s*\d+)?(?:\s*[,，、]\s*\d+(?:\s*[-–]\s*\d+)?)*)/);
+                let verseRef = refMatch ? refMatch[1].trim() : `箴言 (第${entryNum}篇)`;
                 
                 let displayTitle = `${entryNum}) ${verseRef}`;
 
@@ -267,30 +268,64 @@
             }
         }
 
-        function formatTitleForSpeech(title) {
-            const clean = title.replace(/^\d+[）\)]\s*/, '').trim();
-            const match = clean.match(/^箴言\s*(\d+):(\d+)(?:-(\d+))?$/);
-            if (match) {
-                const ch = match[1];
-                const startV = match[2];
-                const endV = match[3];
-                if (endV) {
-                    return `箴言第${ch}章第${startV}至第${endV}節`;
-                } else {
-                    return `箴言第${ch}章第${startV}節`;
-                }
-            }
-            return clean.replace('箴言', '箴言第').replace(':', '章第') + '節';
+        /* ==========================================================
+           朗讀用：經文章節轉換
+           所有「書卷 章:節」一律轉為「書卷第X章第Y節至第Z節」，例如：
+             箴言 1:10-11,13-14 → 箴言第1章第10節至第11節，第13節至第14節
+             （參太 4:8-9）     → （參看馬太福音第4章第8節至第9節）
+             加 6:7下           → 加拉太書第6章第7節下半
+           ========================================================== */
+        const BOOKS = {
+          '創':'創世記','出':'出埃及記','申':'申命記','士':'士師記','撒上':'撒母耳記上','撒下':'撒母耳記下',
+          '伯':'約伯記','詩':'詩篇','詩篇':'詩篇','箴':'箴言','箴言':'箴言','傳':'傳道書','傳道書':'傳道書',
+          '賽':'以賽亞書','耶':'耶利米書','結':'以西結書','以西結書':'以西結書','何':'何西阿書','摩':'阿摩司書',
+          '拿':'約拿書','彌':'彌迦書','彌迦':'彌迦書','鴻':'那鴻書','哈':'哈巴谷書',
+          '太':'馬太福音','可':'馬可福音','路':'路加福音','約':'約翰福音','約翰福音':'約翰福音','徒':'使徒行傳',
+          '羅':'羅馬書','林前':'哥林多前書','林後':'哥林多後書','加':'加拉太書','弗':'以弗所書','腓':'腓立比書',
+          '西':'歌羅西書','帖前':'帖撒羅尼迦前書','帖後':'帖撒羅尼迦後書','提前':'提摩太前書','提後':'提摩太後書',
+          '來':'希伯來書','雅':'雅各書','彼前':'彼得前書','彼後':'彼得後書','約壹':'約翰一書','猶':'猶大書',
+          '啟':'啟示錄','書':'約書亞記'
+        };
+        const bookKeys = Object.keys(BOOKS).sort((a,b)=>b.length-a.length).join('|');
+        const NUM = '\\d+';
+        const VS = `${NUM}[上下]?`;
+        const RANGE = `${VS}(?:\\s*[-–—~～]\\s*${VS})?`;
+        const REF_RE = new RegExp(
+          `(參看|參|比較|見)?[ \\u3000]*(${bookKeys})[ \\u3000]*(${NUM})\\s*[:：]\\s*(${RANGE}(?:\\s*[,，、]\\s*(?:${NUM}\\s*[:：]\\s*)?${RANGE}|\\s*[;；]\\s*${NUM}\\s*[:：]\\s*${RANGE})*)`, 'g');
+        
+        function verseWord(v){ // "7下" -> 第7節下半
+          const m=v.match(/^(\d+)([上下])?$/);
+          return `第${m[1]}節` + (m[2]==='上'?'上半':m[2]==='下'?'下半':'');
         }
-
-        function convertReferenceToSpeech(text) {
-            return text.replace(/箴言\s*(\d+):(\d+)(?:-\d+)?/g, (match, ch, startV, endV) => {
-                if (endV) {
-                    return `箴言第${ch}章第${startV}至第${endV}節`;
-                } else {
-                    return `箴言第${ch}章第${startV}節`;
-                }
+        function rangeWord(r){
+          const parts=r.split(/\s*[-–—~～]\s*/);
+          if(parts.length===2){
+            const a=parts[0].match(/^(\d+)([上下])?$/), b=parts[1].match(/^(\d+)([上下])?$/);
+            const aw=`第${a[1]}節`+(a[2]==='上'?'上半':a[2]==='下'?'下半':'');
+            const bw=`第${b[1]}節`+(b[2]==='上'?'上半':b[2]==='下'?'下半':'');
+            return `${aw}至${bw}`;
+          }
+          return verseWord(parts[0]);
+        }
+        function convertReferenceToSpeech(text){
+          // 猶大書只有一章，經文寫成「猶 14-15」（沒有冒號）
+          text = text.replace(/(參看|參)?猶[ \u3000]*(\d+)(?:\s*[-–—~～]\s*(\d+))?(?![\d:：])/g,
+            (m, pre, a, b) => (pre ? '參看' : '') + '猶大書' + (b ? `第${a}節至第${b}節` : `第${a}節`));
+          return text.replace(REF_RE,(m,pre,book,ch,rest)=>{
+            let bookName = book ? BOOKS[book] : '';
+            let curCh = ch;
+            const items = rest.split(/\s*[,，、;；]\s*/);
+            const out=[];
+            items.forEach((it,i)=>{
+              let chap=null;
+              const cm=it.match(/^(\d+)\s*[:：]\s*(.*)$/);
+              if(cm){ chap=cm[1]; it=cm[2]; curCh=chap; }
+              const w = rangeWord(it);
+              out.push((i===0||chap)?`第${curCh}章${w}`:w);
             });
+            const prefix = pre ? (pre==='參'?'參看':pre) : '';
+            return `${prefix}${bookName}${out.join('，')}`;
+          });
         }
 
         function toggleSpeech() {
@@ -302,7 +337,7 @@
             stopSpeech();
 
             const entry = dbEntries[currentIndex];
-            const spokenTitle = formatTitleForSpeech(entry.title);
+            const spokenTitle = convertReferenceToSpeech(entry.verseRef);
             
             let cleanScripture = entry.scripture.replace(/\*/g, '').replace(/<[^>]*>/g, '');
             cleanScripture = convertReferenceToSpeech(cleanScripture);
