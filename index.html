@@ -82,7 +82,11 @@
                 <!-- 底部朗讀控制 -->
                 <div class="mt-8 pt-4 border-t border-sky-100 flex flex-wrap items-center justify-between gap-3 bg-sky-50/40 p-4 rounded-xl">
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-sky-900 font-semibold tracking-wide">廣東話朗讀</span>
+                        <span class="text-xs text-sky-900 font-semibold tracking-wide">朗讀語言</span>
+                        <div class="flex bg-white border border-sky-300 rounded-lg p-0.5">
+                            <button id="langYue" onclick="setSpeechLang('yue')" class="px-3 py-1 rounded-md text-xs font-semibold transition">廣東話</button>
+                            <button id="langCmn" onclick="setSpeechLang('cmn')" class="px-3 py-1 rounded-md text-xs font-semibold transition">普通話</button>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button id="playBtn" onclick="toggleSpeech()" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition flex items-center gap-1.5">
@@ -98,7 +102,7 @@
 
     <!-- 右下角版本編號 -->
     <footer class="w-full text-right px-4 mt-6">
-        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.3.3</span>
+        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.4.0</span>
     </footer>
 
     <!-- JavaScript 解析器與邏輯 -->
@@ -117,8 +121,40 @@
         let synth = window.speechSynthesis;
         let speechQueue = [];
         let isPlaying = false;
+        let speechLang = localStorage.getItem('speechLang_proverbs') === 'cmn' ? 'cmn' : 'yue';
+
+        function updateLangButtons() {
+            const on = 'bg-sky-600 text-white shadow-sm';
+            const off = 'text-sky-800 hover:bg-sky-50';
+            document.getElementById('langYue').className = `px-3 py-1 rounded-md text-xs font-semibold transition ${speechLang === 'yue' ? on : off}`;
+            document.getElementById('langCmn').className = `px-3 py-1 rounded-md text-xs font-semibold transition ${speechLang === 'cmn' ? on : off}`;
+        }
+
+        function setSpeechLang(lang) {
+            stopSpeech();
+            speechLang = lang;
+            localStorage.setItem('speechLang_proverbs', lang);
+            updateLangButtons();
+        }
+
+        // 依語言揀語音：廣東話 zh-HK / yue；普通話 zh-TW（找不到時才改用 zh-CN）
+        function pickVoice() {
+            if (!synth) return null;
+            const voices = synth.getVoices();
+            const norm = v => (v.lang || '').replace('_', '-').toLowerCase();
+            if (speechLang === 'yue') {
+                const hk = voices.filter(v => ['zh-hk', 'yue', 'yue-hk', 'yue-cn'].includes(norm(v)));
+                return hk.find(v => /Sin-?ji|HiuMaan|HiuGaai|Female|女/i.test(v.name)) || hk[0] || null;
+            }
+            const tw = voices.filter(v => norm(v) === 'zh-tw');
+            const cn = voices.filter(v => norm(v) === 'zh-cn');
+            const pool = tw.length ? tw : cn;
+            return pool.find(v => /Mei-?Jia|HsiaoChen|HsiaoYu|Hsiao|Female|女/i.test(v.name)) || pool[0] || null;
+        }
 
         window.addEventListener('DOMContentLoaded', async () => {
+            updateLangButtons();
+            if (synth) synth.getVoices(); // 讓部分瀏覽器預先載入語音清單
             try {
                 const response = await fetch('箴言隨筆.txt');
                 if (!response.ok) throw new Error('無法讀取資料庫檔案');
@@ -310,7 +346,7 @@
         function convertReferenceToSpeech(text){
           // 猶大書只有一章，經文寫成「猶 14-15」（沒有冒號）
           text = text.replace(/(參看|參)?猶[ \u3000]*(\d+)(?:\s*[-–—~～]\s*(\d+))?(?![\d:：])/g,
-            (m, pre, a, b) => (pre ? '參看' : '') + '猶大書' + (b ? `第${a}節至第${b}節` : `第${a}節`));
+            (m, pre, a, b) => (pre ? '參看' : '') + '猶大書' + (b ? `第1章第${a}節至第${b}節` : `第1章第${a}節`));
           return text.replace(REF_RE,(m,pre,book,ch,rest)=>{
             let bookName = book ? BOOKS[book] : '';
             let curCh = ch;
@@ -401,13 +437,13 @@
 
             const chunk = speechQueue.shift();
             const utterance = new SpeechSynthesisUtterance(chunk);
-            utterance.lang = 'zh-HK';
+            utterance.lang = speechLang === 'yue' ? 'zh-HK' : 'zh-TW';
             utterance.rate = 1.0;
 
-            const voices = synth.getVoices();
-            const hkVoice = voices.find(v => v.lang === 'zh-HK' && (v.name.includes('Sin-ji') || v.name.includes('HiuMaan') || v.name.includes('Female') || v.name.includes('女')));
-            if (hkVoice) {
-                utterance.voice = hkVoice;
+            const voice = pickVoice();
+            if (voice) {
+                utterance.voice = voice;
+                if (voice.lang) utterance.lang = voice.lang;
             }
 
             utterance.onend = () => {
