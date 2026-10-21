@@ -98,7 +98,7 @@
 
     <!-- 右下角版本編號 -->
     <footer class="w-full text-right px-4 mt-6">
-        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.2.1</span>
+        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.2.2</span>
     </footer>
 
     <!-- JavaScript 解析器與邏輯 -->
@@ -264,7 +264,7 @@
             }
         }
 
-        // 修正朗讀標題：自動過濾掉前面的文章編號（如 354)），直接從「箴言」開始正確讀出章節
+        // 精確朗讀標題轉換：將「箴言 1:4-5」轉為「箴言第一章第四至五節」
         function formatTitleForSpeech(title) {
             const clean = title.replace(/^\d+[）\)]\s*/, '').trim();
             const match = clean.match(/^箴言\s*(\d+):(\d+)(?:-(\d+))?$/);
@@ -273,7 +273,7 @@
                 const startV = match[2];
                 const endV = match[3];
                 if (endV) {
-                    return `箴言第${ch}章第${startV}至第${endV}節`;
+                    return `箴言第${ch}章第${startV}至${endV}節`;
                 } else {
                     return `箴言第${ch}章第${startV}節`;
                 }
