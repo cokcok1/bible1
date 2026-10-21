@@ -76,7 +76,7 @@
                 <!-- 經文卡片 (淺藍色框) -->
                 <div id="scriptureText" class="text-sky-950 font-bold bg-sky-50/80 p-5 rounded-xl mb-6 border-l-4 border-sky-600 shadow-sm leading-relaxed transition-all"></div>
 
-                <!-- 分享與隨筆內容 -->
+                <!-- 隨筆分享內容 (已自動隔開【分享】與結尾 ●) -->
                 <div id="reflectionText" class="text-gray-800 leading-relaxed text-justify transition-all"></div>
 
                 <!-- 底部朗讀控制 -->
@@ -96,9 +96,9 @@
         </div>
     </main>
 
-    <!-- 右下角極細版本編號 -->
+    <!-- 右下角版本編號 -->
     <footer class="w-full text-right px-4 mt-6">
-        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.0.0</span>
+        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.2.0</span>
     </footer>
 
     <!-- JavaScript 解析器與邏輯 -->
@@ -111,7 +111,7 @@
             { scripture: 'text-base sm:text-lg', reflection: 'text-sm sm:text-base' },
             { scripture: 'text-lg sm:text-xl', reflection: 'text-base sm:text-lg' },
             { scripture: 'text-xl sm:text-2xl', reflection: 'text-lg sm:text-xl' },
-            { scripture: 'text-2xl sm:text-3xl', reflection: 'text-xl sm:text-2xl' }
+            { scripture: 'text-2xl sm:text-3xl', reflection: 'text-2xl sm:text-3xl' }
         ];
 
         let synth = window.speechSynthesis;
@@ -134,7 +134,6 @@
         });
 
         function parseDatabase(text) {
-            // 透過數字編號加括號（如 298） 或 298)）來切割每一篇隨筆
             const sections = text.split(/\n(?=\d+[）\)]\s*)/);
             dbEntries = [];
 
@@ -154,17 +153,19 @@
                 let refMatch = fullBody.match(/[（—–-]\s*(箴言\s*\d+:\d+(?:-\d+)?)\s*[）)]?/);
                 let verseRef = refMatch ? refMatch[1] : `箴言 (第${entryNum}篇)`;
                 
-                // 下拉選單顯示格式：例如 298) 箴言 27:26-27
                 let displayTitle = `${entryNum}) ${verseRef}`;
 
-                // 分割 智慧人說+經文部分 與 【分享】以後的隨筆內容
                 let scripturePart = "";
                 let reflectionPart = "";
 
                 const shareIndex = fullBody.indexOf('【分享】');
                 if (shareIndex !== -1) {
                     scripturePart = fullBody.substring(0, shareIndex).trim();
-                    reflectionPart = fullBody.substring(shareIndex).trim();
+                    
+                    // 擷取分享之後的內文，並剔除 【分享】 標題與結尾的 ● 符號
+                    let refText = fullBody.substring(shareIndex + 4).trim();
+                    refText = refText.replace(/[●•]\s*$/, '').trim();
+                    reflectionPart = refText;
                 } else {
                     scripturePart = fullBody;
                     reflectionPart = "";
@@ -266,14 +267,12 @@
             }
         }
 
-        // 將經文標題轉換為流暢的廣東話讀音
         function formatTitleForSpeech(title) {
             return title.replace(/^\d+[）\)]\s*/, '第')
                         .replace('箴言', '箴言第')
                         .replace(':', '章第') + '節';
         }
 
-        // 啟動朗讀
         function toggleSpeech() {
             if (isPlaying) {
                 stopSpeech();
