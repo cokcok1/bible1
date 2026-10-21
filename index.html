@@ -102,7 +102,7 @@
 
     <!-- 右下角版本編號 -->
     <footer class="w-full text-right px-4 mt-6">
-        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.4.0</span>
+        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.4.1</span>
     </footer>
 
     <!-- JavaScript 解析器與邏輯 -->
@@ -137,24 +137,34 @@
             updateLangButtons();
         }
 
-        // 依語言揀語音：廣東話 zh-HK / yue；普通話 zh-TW（找不到時才改用 zh-CN）
+        // 優先揀選廣東話 Siri 聲音 / 高質素 Apple 語音
         function pickVoice() {
             if (!synth) return null;
             const voices = synth.getVoices();
             const norm = v => (v.lang || '').replace('_', '-').toLowerCase();
+            
             if (speechLang === 'yue') {
                 const hk = voices.filter(v => ['zh-hk', 'yue', 'yue-hk', 'yue-cn'].includes(norm(v)));
-                return hk.find(v => /Sin-?ji|HiuMaan|HiuGaai|Female|女/i.test(v.name)) || hk[0] || null;
+                // 優先尋找名稱包含 Siri、Sin-ji、HiuMaan、HiuGaai 的語音
+                return hk.find(v => /siri|sin-?ji|hiumaan|hiugaai/i.test(v.name)) || 
+                       hk.find(v => /female|女/i.test(v.name)) || 
+                       hk[0] || null;
+            } else {
+                const tw = voices.filter(v => norm(v) === 'zh-tw');
+                const cn = voices.filter(v => norm(v) === 'zh-cn');
+                const pool = tw.length ? tw : cn;
+                return pool.find(v => /siri|mei-?jia|hsiao|female|女/i.test(v.name)) || pool[0] || null;
             }
-            const tw = voices.filter(v => norm(v) === 'zh-tw');
-            const cn = voices.filter(v => norm(v) === 'zh-cn');
-            const pool = tw.length ? tw : cn;
-            return pool.find(v => /Mei-?Jia|HsiaoChen|HsiaoYu|Hsiao|Female|女/i.test(v.name)) || pool[0] || null;
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
             updateLangButtons();
-            if (synth) synth.getVoices(); // 讓部分瀏覽器預先載入語音清單
+            if (synth) {
+                synth.getVoices();
+                if (synth.onvoiceschanged !== undefined) {
+                    synth.onvoiceschanged = () => { synth.getVoices(); };
+                }
+            }
             try {
                 const response = await fetch('箴言隨筆.txt');
                 if (!response.ok) throw new Error('無法讀取資料庫檔案');
@@ -170,7 +180,7 @@
         });
 
         function parseDatabase(text) {
-            const sections = text.split(/\n(?=\d+[）\)][ \t]*\r?\n)/)  // 只在「單獨一行的編號」處分段，避免把內文裡的 1）2）3）清單當成新篇;
+            const sections = text.split(/\n(?=\d+[）\)][ \t]*\r?\n)/);
             dbEntries = [];
 
             sections.forEach(sec => {
@@ -185,7 +195,6 @@
 
                 const fullBody = lines.slice(1).join('\n');
 
-                // 經文出處：支援 1:10-11,13-14 / 9:15, 17-18 等多段寫法
                 let refMatch = fullBody.match(/[（—–-]\s*(箴言\s*\d+\s*:\s*\d+(?:\s*[-–]\s*\d+)?(?:\s*[,，、]\s*\d+(?:\s*[-–]\s*\d+)?)*)/);
                 let verseRef = refMatch ? refMatch[1].trim() : `箴言 (第${entryNum}篇)`;
                 
@@ -200,7 +209,6 @@
                     let refText = fullBody.substring(shareIndex + 4).trim();
                     refText = refText.replace(/[●•]\s*$/, '').trim();
                     
-                    // 自動加入指定的結尾文字
                     refText += "\n\n鄭澤賢傳道\n歡迎轉載";
                     reflectionPart = refText;
                 } else {
@@ -304,13 +312,6 @@
             }
         }
 
-        /* ==========================================================
-           朗讀用：經文章節轉換
-           所有「書卷 章:節」一律轉為「書卷第X章第Y節至第Z節」，例如：
-             箴言 1:10-11,13-14 → 箴言第1章第10節至第11節，第13節至第14節
-             （參太 4:8-9）     → （參看馬太福音第4章第8節至第9節）
-             加 6:7下           → 加拉太書第6章第7節下半
-           ========================================================== */
         const BOOKS = {
           '創':'創世記','出':'出埃及記','申':'申命記','士':'士師記','撒上':'撒母耳記上','撒下':'撒母耳記下',
           '伯':'約伯記','詩':'詩篇','詩篇':'詩篇','箴':'箴言','箴言':'箴言','傳':'傳道書','傳道書':'傳道書',
@@ -329,7 +330,7 @@
         const REF_RE = new RegExp(
           `(參看|參|比較|見)?[ \\u3000]*(${bookKeys})[ \\u3000]*(${NUM})\\s*[:：]\\s*(${RANGE}(?:\\s*[,，、]\\s*(?:${NUM}\\s*[:：]\\s*)?${RANGE}|\\s*[;；]\\s*${NUM}\\s*[:：]\\s*${RANGE})*)`, 'g');
         
-        function verseWord(v){ // "7下" -> 第7節下半
+        function verseWord(v){
           const m=v.match(/^(\d+)([上下])?$/);
           return `第${m[1]}節` + (m[2]==='上'?'上半':m[2]==='下'?'下半':'');
         }
@@ -344,7 +345,6 @@
           return verseWord(parts[0]);
         }
         function convertReferenceToSpeech(text){
-          // 猶大書只有一章，經文寫成「猶 14-15」（沒有冒號）
           text = text.replace(/(參看|參)?猶[ \u3000]*(\d+)(?:\s*[-–—~～]\s*(\d+))?(?![\d:：])/g,
             (m, pre, a, b) => (pre ? '參看' : '') + '猶大書' + (b ? `第1章第${a}節至第${b}節` : `第1章第${a}節`));
           return text.replace(REF_RE,(m,pre,book,ch,rest)=>{
@@ -364,42 +364,29 @@
           });
         }
         
-        // 朗讀前清理：去除或轉換不應被讀出的符號（＊ ● … — ． 括號 emoji 等）
         function sanitizeForSpeech(text){
           const CJK = '\\u3400-\\u9fff\\u{20000}-\\u{2ffff}';
           let t = text;
-          // emoji、零寬字元
           t = t.replace(/[\u200b-\u200d\ufe0e\ufe0f\u2060]|[\u{1F000}-\u{1FFFF}]|[\u2600-\u27BF]/gu, '');
-          // 日期 15/12/2021 → 2021年12月15日
           t = t.replace(/(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/g, '$3年$2月$1日');
-          // 數學符號
           t = t.replace(/\s*[＋+]\s*/g, '加').replace(/\s*[＝=]\s*/g, '等於').replace(/\s*×\s*/g, '乘');
-          // 省略號：…… ... ......
           t = t.replace(/[…⋯]+|\.{2,}|。{2,}/g, '，');
-          // 人名中間點、項目符號、星號、裝飾符號 → 直接去除
           t = t.replace(/[．·・•●○◎■□◆◇★☆※▲▼♪＊*]/g, '');
-          // 破折號、連接號、波浪號 → 停頓
           t = t.replace(/[—–―─━－~～]+|-{2,}/g, '，');
-          // 斜線
           t = t.replace(new RegExp(`(?<=[${CJK}])\\s*[/／]\\s*(?=[${CJK}])`, 'gu'), '或').replace(/[/／]/g, ' ');
-          // 中文後面的 "." 當作停頓（例如「二. 精神」）
           t = t.replace(new RegExp(`(?<=[${CJK}])\\s*\\.(?=\\s|[${CJK}])`, 'gu'), '，');
           t = t.replace(/﹔/g, '；');
-          // 括號 → 停頓；引號、書名號 → 去除
           t = t.replace(/[（()）【】〔〕\[\]]/g, '，');
           t = t.replace(/[「」『』《》〈〉＜＞<>"“”]/g, '');
-          // 整理重複標點與空白
           t = t.replace(/([，、；：])[，、；：]+/g, '$1');
           t = t.replace(/([。！？])[，、；：]+/g, '$1');
           t = t.replace(/^[，、；：\s]+/gm, '').replace(/[ \t\u3000]+/g, ' ');
           return t;
         }
         
-        // 一律先轉經文章節，再清理符號
         function prepareSpeechText(text){
           return sanitizeForSpeech(convertReferenceToSpeech(text.replace(/<[^>]*>/g, '')));
         }
-        
 
         function toggleSpeech() {
             if (isPlaying) {
@@ -412,15 +399,13 @@
             const entry = dbEntries[currentIndex];
             const spokenTitle = prepareSpeechText(entry.verseRef);
             const cleanScripture = prepareSpeechText(entry.scripture);
-            // 結尾兩行合成同一句，避免「歡迎轉載」單獨成句時被語音引擎讀錯
             const cleanReflection = prepareSpeechText(entry.reflection)
                 .replace(/鄭澤賢傳道\s*歡迎轉載\s*$/, '鄭澤賢傳道，歡迎轉載。');
 
             const fullText = `${spokenTitle}。${cleanScripture}。${cleanReflection}`;
 
-            // 分句；只保留真正含有文字或數字的句子，避免把純符號讀出來
             speechQueue = (fullText.match(/[^。！？\n]+[。！？\n]*/g) || [fullText])
-                .filter(s => /[\u3400-\u9fff\u{20000}-\u{2ffff}0-9A-Za-z]/u.test(s));
+                .filter(s => /[\u3400-\u9fff\\u{20000}-\\u{2ffff}0-9A-Za-z]/u.test(s));
 
             isPlaying = true;
             document.getElementById('playText').textContent = '停止朗讀';
