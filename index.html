@@ -76,14 +76,8 @@
                 <!-- 經文卡片 (淺藍色框) -->
                 <div id="scriptureText" class="text-sky-950 font-bold bg-sky-50/80 p-5 rounded-xl mb-6 border-l-4 border-sky-600 shadow-sm leading-relaxed transition-all"></div>
 
-                <!-- 隨筆分享內容 -->
+                <!-- 隨筆分享內容 (底部已自動加入結尾) -->
                 <div id="reflectionText" class="text-gray-800 leading-relaxed text-justify transition-all"></div>
-
-                <!-- 文章結尾落款 -->
-                <div class="mt-6 pt-4 border-t border-sky-100 text-right text-xs text-sky-800 font-medium space-y-0.5 select-none">
-                    <p>鄭澤賢傳道</p>
-                    <p>歡迎轉載</p>
-                </div>
 
                 <!-- 底部朗讀控制 -->
                 <div class="mt-8 pt-4 border-t border-sky-100 flex flex-wrap items-center justify-between gap-3 bg-sky-50/40 p-4 rounded-xl">
@@ -104,7 +98,7 @@
 
     <!-- 右下角版本編號 -->
     <footer class="w-full text-right px-4 mt-6">
-        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.2.3</span>
+        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.3.0</span>
     </footer>
 
     <!-- JavaScript 解析器與邏輯 -->
@@ -117,21 +111,12 @@
             { scripture: 'text-base sm:text-lg', reflection: 'text-sm sm:text-base' },
             { scripture: 'text-lg sm:text-xl', reflection: 'text-base sm:text-lg' },
             { scripture: 'text-xl sm:text-2xl', reflection: 'text-lg sm:text-xl' },
-            { scripture: 'text-2xl sm:text-3xl', reflection: 'text-xl sm:text-2xl' }
+            { scripture: 'text-2xl sm:text-3xl', reflection: 'text-2xl sm:text-3xl' }
         ];
 
         let synth = window.speechSynthesis;
         let speechQueue = [];
         let isPlaying = false;
-
-        // PWA Service Worker 註冊 (支援 Android PWA 安裝)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => {
-                    console.log('ServiceWorker 註冊失敗: ', err);
-                });
-            });
-        }
 
         window.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -177,10 +162,13 @@
                     scripturePart = fullBody.substring(0, shareIndex).trim();
                     let refText = fullBody.substring(shareIndex + 4).trim();
                     refText = refText.replace(/[●•]\s*$/, '').trim();
+                    
+                    // 自動加入指定的結尾文字
+                    refText += "\n\n鄭澤賢傳道\n歡迎轉載";
                     reflectionPart = refText;
                 } else {
                     scripturePart = fullBody;
-                    reflectionPart = "";
+                    reflectionPart = "鄭澤賢傳道\n歡迎轉載";
                 }
 
                 dbEntries.push({
@@ -296,7 +284,7 @@
         }
 
         function convertReferenceToSpeech(text) {
-            return text.replace(/箴言\s*(\d+):(\d+)(?:-(\d+))?/g, (match, ch, startV, endV) => {
+            return text.replace(/箴言\s*(\d+):(\d+)(?:-\d+)?/g, (match, ch, startV, endV) => {
                 if (endV) {
                     return `箴言第${ch}章第${startV}至第${endV}節`;
                 } else {
