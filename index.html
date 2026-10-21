@@ -264,7 +264,7 @@
             }
         }
 
-        // 精確朗讀標題轉換：將「箴言 1:4-5」轉為「箴言第一章第四至五節」
+        // 將任何經文出處（如 箴言 1:4-5）轉換為流暢的廣東話讀音
         function formatTitleForSpeech(title) {
             const clean = title.replace(/^\d+[）\)]\s*/, '').trim();
             const match = clean.match(/^箴言\s*(\d+):(\d+)(?:-(\d+))?$/);
@@ -273,12 +273,23 @@
                 const startV = match[2];
                 const endV = match[3];
                 if (endV) {
-                    return `箴言第${ch}章第${startV}至${endV}節`;
+                    return `箴言第${ch}章第${startV}至第${endV}節`;
                 } else {
                     return `箴言第${ch}章第${startV}節`;
                 }
             }
             return clean.replace('箴言', '箴言第').replace(':', '章第') + '節';
+        }
+
+        // 將內文中的經文引用（如 — 箴言 1:4-5）轉為正確粵音
+        function convertReferenceToSpeech(text) {
+            return text.replace(/箴言\s*(\d+):(\d+)(?:-(\d+))?/g, (match, ch, startV, endV) => {
+                if (endV) {
+                    return `箴言第${ch}章第${startV}至第${endV}節`;
+                } else {
+                    return `箴言第${ch}章第${startV}節`;
+                }
+            });
         }
 
         function toggleSpeech() {
@@ -292,9 +303,13 @@
             const entry = dbEntries[currentIndex];
             const spokenTitle = formatTitleForSpeech(entry.title);
             
-            const fullText = `${spokenTitle}。${entry.scripture}。${entry.reflection}`
-                .replace(/\*/g, '')
-                .replace(/<[^>]*>/g, '');
+            let cleanScripture = entry.scripture.replace(/\*/g, '').replace(/<[^>]*>/g, '');
+            cleanScripture = convertReferenceToSpeech(cleanScripture);
+
+            let cleanReflection = entry.reflection.replace(/\*/g, '').replace(/<[^>]*>/g, '');
+            cleanReflection = convertReferenceToSpeech(cleanReflection);
+
+            const fullText = `${spokenTitle}。${cleanScripture}。${cleanReflection}`;
 
             speechQueue = fullText.match(/[^。！？\n]+[。！？\n]*/g) || [fullText];
 
