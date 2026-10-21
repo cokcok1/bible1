@@ -79,6 +79,12 @@
                 <!-- 隨筆分享內容 -->
                 <div id="reflectionText" class="text-gray-800 leading-relaxed text-justify transition-all"></div>
 
+                <!-- 文章結尾落款 -->
+                <div class="mt-6 pt-4 border-t border-sky-100 text-right text-xs text-sky-800 font-medium space-y-0.5 select-none">
+                    <p>鄭澤賢傳道</p>
+                    <p>歡迎轉載</p>
+                </div>
+
                 <!-- 底部朗讀控制 -->
                 <div class="mt-8 pt-4 border-t border-sky-100 flex flex-wrap items-center justify-between gap-3 bg-sky-50/40 p-4 rounded-xl">
                     <div class="flex items-center gap-2">
@@ -98,7 +104,7 @@
 
     <!-- 右下角版本編號 -->
     <footer class="w-full text-right px-4 mt-6">
-        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.2.2</span>
+        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.2.3</span>
     </footer>
 
     <!-- JavaScript 解析器與邏輯 -->
@@ -117,6 +123,15 @@
         let synth = window.speechSynthesis;
         let speechQueue = [];
         let isPlaying = false;
+
+        // PWA Service Worker 註冊 (支援 Android PWA 安裝)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.log('ServiceWorker 註冊失敗: ', err);
+                });
+            });
+        }
 
         window.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -264,7 +279,6 @@
             }
         }
 
-        // 將任何經文出處（如 箴言 1:4-5）轉換為流暢的廣東話讀音
         function formatTitleForSpeech(title) {
             const clean = title.replace(/^\d+[）\)]\s*/, '').trim();
             const match = clean.match(/^箴言\s*(\d+):(\d+)(?:-(\d+))?$/);
@@ -281,7 +295,6 @@
             return clean.replace('箴言', '箴言第').replace(':', '章第') + '節';
         }
 
-        // 將內文中的經文引用（如 — 箴言 1:4-5）轉為正確粵音
         function convertReferenceToSpeech(text) {
             return text.replace(/箴言\s*(\d+):(\d+)(?:-(\d+))?/g, (match, ch, startV, endV) => {
                 if (endV) {
