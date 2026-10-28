@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>箴言隨筆</title>
+    
+    <!-- PWA / 手機安裝支援設定 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2b6cb0">
+    
+    <!-- iOS (iPhone/iPad) 專用安裝支援 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="箴言隨筆">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif;
+            background-color: #f0f7ff;
+            color: #1a365d;
+        }
+        .zen-card {
+            background: #ffffff;
+            border: 1px solid #d0e1fd;
+        }
+        .paragraph-block {
+            margin-bottom: 1.25rem;
+            line-height: 1.8;
+        }
+        .paragraph-block:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between pb-10">
+
+    <!-- 頂部導航與選擇器 -->
+    <header class="w-full bg-white shadow-sm border-b border-sky-100 sticky top-0 z-50">
+        <div class="max-w-3xl mx-auto px-4 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <h1 class="text-lg sm:text-xl font-bold text-sky-900 tracking-wider">🧧 箴言隨筆</h1>
+            
+            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+                <select id="verseSelect" class="bg-sky-50 border border-sky-300 text-sky-950 text-base font-semibold rounded-lg focus:ring-sky-500 focus:border-sky-500 p-2 outline-none transition flex-grow sm:w-64">
+                    <option value="">載入資料庫中...</option>
+                </select>
+
+                <div class="flex items-center gap-1 bg-sky-50 border border-sky-300 rounded-lg p-1 shrink-0">
+                    <span class="text-xs text-sky-800 px-1 font-bold">字體</span>
+                    <button onclick="changeFontSize(-1)" class="w-7 h-7 bg-white hover:bg-sky-100 text-sky-950 rounded font-bold text-xs shadow-sm transition flex items-center justify-center" title="縮小字體">A-</button>
+                    <button onclick="changeFontSize(1)" class="w-7 h-7 bg-white hover:bg-sky-100 text-sky-950 rounded font-bold text-xs shadow-sm transition flex items-center justify-center" title="放大字體">A+</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="max-w-3xl w-full mx-auto px-4 mt-6 flex-grow">
+        <div id="loadingIndicator" class="text-center py-20 text-sky-700">
+            <p class="text-base animate-pulse">正在從「箴言隨筆.txt」讀取資料庫...</p>
+        </div>
+
+        <div id="contentContainer" class="hidden space-y-6">
+            <div class="zen-card rounded-2xl p-6 sm:p-8 shadow-sm">
+                <div class="flex items-center justify-between border-b border-sky-100 pb-4 mb-5">
+                    <span id="verseTitle" class="text-xl sm:text-2xl font-bold text-sky-950 bg-sky-100/80 px-3.5 py-1.5 rounded-md tracking-wide"></span>
+                    <div class="flex items-center gap-2">
+                        <button id="prevBtn" onclick="changeVerse(-1)" class="px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed">上一段</button>
+                        <button id="nextBtn" onclick="changeVerse(1)" class="px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed">下一段</button>
+                    </div>
+                </div>
+
+                <!-- 經文卡片 (淺藍色框) -->
+                <div id="scriptureText" class="text-sky-950 font-bold bg-sky-50/80 p-5 rounded-xl mb-6 border-l-4 border-sky-600 shadow-sm leading-relaxed transition-all"></div>
+
+                <!-- 隨筆分享內容 (底部已自動加入結尾) -->
+                <div id="reflectionText" class="text-gray-800 leading-relaxed text-justify transition-all"></div>
+
+                <!-- 底部朗讀控制（語言切換 + 聆聽/停止朗讀，同一行） -->
+                <div class="mt-8 pt-3 border-t border-sky-100 flex flex-nowrap items-center justify-between gap-2 bg-sky-50/40 p-3 rounded-xl">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="text-xs text-sky-900 font-semibold tracking-wide whitespace-nowrap max-[379px]:hidden">朗讀語言</span>
+                        <div class="flex bg-white border border-sky-300 rounded-lg p-0.5 shrink-0">
+                            <button id="langYue" onclick="setSpeechLang('yue')" class="px-2.5 py-1 rounded-md text-xs font-semibold transition whitespace-nowrap">廣東話</button>
+                            <button id="langCmn" onclick="setSpeechLang('cmn')" class="px-2.5 py-1 rounded-md text-xs font-semibold transition whitespace-nowrap">普通話</button>
+                        </div>
+                    </div>
+                    <button id="playBtn" onclick="toggleSpeech()" class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-xl text-sm font-medium shadow-sm transition flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                        <svg id="playIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span id="playText">聆聽整段</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 右下角版本編號 -->
+    <footer class="w-full text-right px-4 mt-6">
+        <span class="text-[10px] text-gray-400 font-mono tracking-tighter select-none">v1.4.3</span>
+    </footer>
+
+    <!-- JavaScript 解析器與邏輯 -->
+    <script>
+        // 註冊 Service Worker（Android Chrome 需要它才能「安裝應用程式」）
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW 註冊失敗', err));
+            });
+        }
+        let dbEntries = [];
+        let currentIndex = 0;
+        let fontSizeLevel = parseInt(localStorage.getItem('fontSizeLevel_proverbs')) || 2;
+        
+        const fontScaleConfigs = [
+            { scripture: 'text-base sm:text-lg', reflection: 'text-sm sm:text-base' },
+            { scripture: 'text-lg sm:text-xl', reflection: 'text-base sm:text-lg' },
+            { scripture: 'text-xl sm:text-2xl', reflection: 'text-lg sm:text-xl' },
+            { scripture: 'text-2xl sm:text-3xl', reflection: 'text-2xl sm:text-3xl' }
+        ];
+
+        let synth = window.speechSynthesis;
+        let speechQueue = [];
+        let isPlaying = false;
+        let speechLang = localStorage.getItem('speechLang_proverbs') === 'cmn' ? 'cmn' : 'yue';
+
+        function updateLangButtons() {
+            const on = 'bg-sky-600 text-white shadow-sm';
+            const off = 'text-sky-800 hover:bg-sky-50';
+            document.getElementById('langYue').className = `px-3 py-1 rounded-md text-xs font-semibold transition ${speechLang === 'yue' ? on : off}`;
+            document.getElementById('langCmn').className = `px-3 py-1 rounded-md text-xs font-semibold transition ${speechLang === 'cmn' ? on : off}`;
+        }
+
+        function setSpeechLang(lang) {
+            stopSpeech();
+            speechLang = lang;
+            localStorage.setItem('speechLang_proverbs', lang);
+            updateLangButtons();
+        }
+
+        // 依語言揀語音：廣東話 zh-HK / yue；普通話 zh-TW（找不到時才改用 zh-CN）
+        function pickVoice() {
+            if (!synth) return null;
+            const voices = synth.getVoices();
+            const norm = v => (v.lang || '').replace('_', '-').toLowerCase();
+            if (speechLang === 'yue') {
+                // 與 v1.3.3 相同：只在 zh-HK 語音中揀指定名稱，揀不到就不指定（用瀏覽器預設的 zh-HK 語音）
+                return voices.find(v => v.lang === 'zh-HK' && (v.name.includes('Sin-ji') || v.name.includes('HiuMaan') || v.name.includes('Female') || v.name.includes('女'))) || null;
+            }
+            const tw = voices.filter(v => norm(v) === 'zh-tw');
+            const cn = voices.filter(v => norm(v) === 'zh-cn');
+            const pool = tw.length ? tw : cn;
+            return pool.find(v => /Mei-?Jia|HsiaoChen|HsiaoYu|Hsiao|Female|女/i.test(v.name)) || pool[0] || null;
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            updateLangButtons();
+            if (synth) synth.getVoices(); // 讓部分瀏覽器預先載入語音清單
+            try {
+                const response = await fetch('箴言隨筆.txt');
+                if (!response.ok) throw new Error('無法讀取資料庫檔案');
+                const rawText = await response.text();
+                parseDatabase(rawText);
+            } catch (error) {
+                console.error(error);
+                document.getElementById('loadingIndicator').innerHTML = `
+                    <p class="text-red-500 font-medium">無法自動載入「箴言隨筆.txt」檔案。</p>
+                    <p class="text-xs text-gray-500 mt-2">請確保「箴言隨筆.txt」與網頁放在同一個目錄下。</p>
+                `;
+            }
+        });
+
+        function parseDatabase(text) {
+            const sections = text.split(/\n(?=\d+[）\)][ \t]*\r?\n)/)  // 只在「單獨一行的編號」處分段，避免把內文裡的 1）2）3）清單當成新篇;
+            dbEntries = [];
+
+            sections.forEach(sec => {
+                const trimmed = sec.trim();
+                if (!trimmed) return;
+
+                const lines = trimmed.split('\n');
+                const firstLine = lines[0].trim();
+                const numMatch = firstLine.match(/^(\d+)[）)]/);
+                if (!numMatch) return;
+                const entryNum = numMatch[1];
+
+                const fullBody = lines.slice(1).join('\n');
+
+                // 經文出處：支援 1:10-11,13-14 / 9:15, 17-18 等多段寫法
+                let refMatch = fullBody.match(/[（—–-]\s*(箴言\s*\d+\s*:\s*\d+(?:\s*[-–]\s*\d+)?(?:\s*[,，、]\s*\d+(?:\s*[-–]\s*\d+)?)*)/);
+                let verseRef = refMatch ? refMatch[1].trim() : `箴言 (第${entryNum}篇)`;
+                
+                let displayTitle = `${entryNum}) ${verseRef}`;
+
+                let scripturePart = "";
+                let reflectionPart = "";
+
+                const shareIndex = fullBody.indexOf('【分享】');
+                if (shareIndex !== -1) {
+                    scripturePart = fullBody.substring(0, shareIndex).trim();
+                    let refText = fullBody.substring(shareIndex + 4).trim();
+                    refText = refText.replace(/[●•]\s*$/, '').trim();
+                    
+                    // 自動加入指定的結尾文字
+                    refText += "\n\n鄭澤賢傳道\n歡迎轉載";
+                    reflectionPart = refText;
+                } else {
+                    scripturePart = fullBody;
+                    reflectionPart = "鄭澤賢傳道\n歡迎轉載";
+                }
+
+                dbEntries.push({
+                    number: entryNum,
+                    verseRef: verseRef,
+                    title: displayTitle,
+                    scripture: scripturePart,
+                    reflection: reflectionPart
+                });
+            });
+
+            if (dbEntries.length > 0) {
+                populateSelector();
+                
+                let savedIndex = parseInt(localStorage.getItem('lastReadIndex_proverbs'));
+                if (isNaN(savedIndex) || savedIndex < 0 || savedIndex >= dbEntries.length) {
+                    savedIndex = 0;
+                }
+                
+                displayEntry(savedIndex);
+                document.getElementById('loadingIndicator').classList.add('hidden');
+                document.getElementById('contentContainer').classList.remove('hidden');
+            } else {
+                document.getElementById('loadingIndicator').innerHTML = `<p class="text-red-500">解析檔案失敗，未找到有效內容。</p>`;
+            }
+        }
+
+        function populateSelector() {
+            const select = document.getElementById('verseSelect');
+            select.innerHTML = '';
+            dbEntries.forEach((entry, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = entry.title;
+                option.className = "font-semibold";
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', (e) => {
+                stopSpeech();
+                currentIndex = parseInt(e.target.value);
+                displayEntry(currentIndex);
+            });
+        }
+
+        function displayEntry(index) {
+            currentIndex = index;
+            localStorage.setItem('lastReadIndex_proverbs', currentIndex);
+
+            document.getElementById('verseSelect').value = index;
+            document.getElementById('verseTitle').textContent = dbEntries[index].title;
+
+            const entry = dbEntries[index];
+            const cleanScripture = entry.scripture.replace(/\*/g, '');
+            
+            const currentConfig = fontScaleConfigs[fontSizeLevel];
+            
+            const scriptureEl = document.getElementById('scriptureText');
+            scriptureEl.className = `text-sky-950 font-bold bg-sky-50/80 p-5 rounded-xl mb-6 border-l-4 border-sky-600 shadow-sm leading-relaxed transition-all ${currentConfig.scripture}`;
+            scriptureEl.innerHTML = formatParagraphs(cleanScripture);
+
+            const reflectionEl = document.getElementById('reflectionText');
+            reflectionEl.className = `text-gray-800 leading-relaxed text-justify transition-all ${currentConfig.reflection}`;
+            reflectionEl.innerHTML = formatParagraphs(entry.reflection);
+
+            document.getElementById('prevBtn').disabled = currentIndex === 0;
+            document.getElementById('nextBtn').disabled = currentIndex === dbEntries.length - 1;
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function changeFontSize(direction) {
+            fontSizeLevel += direction;
+            if (fontSizeLevel < 0) fontSizeLevel = 0;
+            if (fontSizeLevel >= fontScaleConfigs.length) fontSizeLevel = fontScaleConfigs.length - 1;
+            
+            localStorage.setItem('fontSizeLevel_proverbs', fontSizeLevel);
+            displayEntry(currentIndex);
+        }
+
+        function formatParagraphs(text) {
+            const paragraphs = text.split(/\n\s*\n/);
+            return paragraphs
+                .map(p => {
+                    const cleanP = p.trim().replace(/\n/g, '<br>');
+                    return cleanP ? `<p class="paragraph-block">${cleanP}</p>` : '';
+                })
+                .join('');
+        }
+
+        function changeVerse(direction) {
+            stopSpeech();
+            const newIndex = currentIndex + direction;
+            if (newIndex >= 0 && newIndex < dbEntries.length) {
+                displayEntry(newIndex);
+            }
+        }
+
+        /* ==========================================================
+           朗讀用：經文章節轉換
+           所有「書卷 章:節」一律轉為「書卷第X章第Y節至第Z節」，例如：
+             箴言 1:10-11,13-14 → 箴言第1章第10節至第11節，第13節至第14節
+             （參太 4:8-9）     → （參看馬太福音第4章第8節至第9節）
+             加 6:7下           → 加拉太書第6章第7節下半
+           ========================================================== */
+        const BOOKS = {
+          '創':'創世記','出':'出埃及記','申':'申命記','士':'士師記','撒上':'撒母耳記上','撒下':'撒母耳記下',
+          '伯':'約伯記','詩':'詩篇','詩篇':'詩篇','箴':'箴言','箴言':'箴言','傳':'傳道書','傳道書':'傳道書',
+          '賽':'以賽亞書','耶':'耶利米書','結':'以西結書','以西結書':'以西結書','何':'何西阿書','摩':'阿摩司書',
+          '拿':'約拿書','彌':'彌迦書','彌迦':'彌迦書','鴻':'那鴻書','哈':'哈巴谷書',
+          '太':'馬太福音','可':'馬可福音','路':'路加福音','約':'約翰福音','約翰福音':'約翰福音','徒':'使徒行傳',
+          '羅':'羅馬書','林前':'哥林多前書','林後':'哥林多後書','加':'加拉太書','弗':'以弗所書','腓':'腓立比書',
+          '西':'歌羅西書','帖前':'帖撒羅尼迦前書','帖後':'帖撒羅尼迦後書','提前':'提摩太前書','提後':'提摩太後書',
+          '來':'希伯來書','雅':'雅各書','彼前':'彼得前書','彼後':'彼得後書','約壹':'約翰一書','猶':'猶大書',
+          '啟':'啟示錄','書':'約書亞記'
+        };
+        const bookKeys = Object.keys(BOOKS).sort((a,b)=>b.length-a.length).join('|');
+        const NUM = '\\d+';
+        const VS = `${NUM}[上下]?`;
+        const RANGE = `${VS}(?:\\s*[-–—~～]\\s*${VS})?`;
+        const REF_RE = new RegExp(
+          `(參看|參|比較|見)?[ \\u3000]*(${bookKeys})[ \\u3000]*(${NUM})\\s*[:：]\\s*(${RANGE}(?:\\s*[,，、]\\s*(?:${NUM}\\s*[:：]\\s*)?${RANGE}|\\s*[;；]\\s*${NUM}\\s*[:：]\\s*${RANGE})*)`, 'g');
+        
+        function verseWord(v){ // "7下" -> 第7節下半
+          const m=v.match(/^(\d+)([上下])?$/);
+          return `第${m[1]}節` + (m[2]==='上'?'上半':m[2]==='下'?'下半':'');
+        }
+        function rangeWord(r){
+          const parts=r.split(/\s*[-–—~～]\s*/);
+          if(parts.length===2){
+            const a=parts[0].match(/^(\d+)([上下])?$/), b=parts[1].match(/^(\d+)([上下])?$/);
+            const aw=`第${a[1]}節`+(a[2]==='上'?'上半':a[2]==='下'?'下半':'');
+            const bw=`第${b[1]}節`+(b[2]==='上'?'上半':b[2]==='下'?'下半':'');
+            return `${aw}至${bw}`;
+          }
+          return verseWord(parts[0]);
+        }
+        function convertReferenceToSpeech(text){
+          // 猶大書只有一章，經文寫成「猶 14-15」（沒有冒號）
+          text = text.replace(/(參看|參)?猶[ \u3000]*(\d+)(?:\s*[-–—~～]\s*(\d+))?(?![\d:：])/g,
+            (m, pre, a, b) => (pre ? '參看' : '') + '猶大書' + (b ? `第1章第${a}節至第${b}節` : `第1章第${a}節`));
+          return text.replace(REF_RE,(m,pre,book,ch,rest)=>{
+            let bookName = book ? BOOKS[book] : '';
+            let curCh = ch;
+            const items = rest.split(/\s*[,，、;；]\s*/);
+            const out=[];
+            items.forEach((it,i)=>{
+              let chap=null;
+              const cm=it.match(/^(\d+)\s*[:：]\s*(.*)$/);
+              if(cm){ chap=cm[1]; it=cm[2]; curCh=chap; }
+              const w = rangeWord(it);
+              out.push((i===0||chap)?`第${curCh}章${w}`:w);
+            });
+            const prefix = pre ? (pre==='參'?'參看':pre) : '';
+            return `${prefix}${bookName}${out.join('，')}`;
+          });
+        }
+        
+        // 朗讀前清理：去除或轉換不應被讀出的符號（＊ ● … — ． 括號 emoji 等）
+        function sanitizeForSpeech(text){
+          const CJK = '\\u3400-\\u9fff\\u{20000}-\\u{2ffff}';
+          let t = text;
+          // emoji、零寬字元
+          t = t.replace(/[\u200b-\u200d\ufe0e\ufe0f\u2060]|[\u{1F000}-\u{1FFFF}]|[\u2600-\u27BF]/gu, '');
+          // 日期 15/12/2021 → 2021年12月15日
+          t = t.replace(/(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/g, '$3年$2月$1日');
+          // 數學符號
+          t = t.replace(/\s*[＋+]\s*/g, '加').replace(/\s*[＝=]\s*/g, '等於').replace(/\s*×\s*/g, '乘');
+          // 省略號：…… ... ......
+          t = t.replace(/[…⋯]+|\.{2,}|。{2,}/g, '，');
+          // 人名中間點、項目符號、星號、裝飾符號 → 直接去除
+          t = t.replace(/[．·・•●○◎■□◆◇★☆※▲▼♪＊*]/g, '');
+          // 破折號、連接號、波浪號 → 停頓
+          t = t.replace(/[—–―─━－~～]+|-{2,}/g, '，');
+          // 斜線
+          t = t.replace(new RegExp(`(?<=[${CJK}])\\s*[/／]\\s*(?=[${CJK}])`, 'gu'), '或').replace(/[/／]/g, ' ');
+          // 中文後面的 "." 當作停頓（例如「二. 精神」）
+          t = t.replace(new RegExp(`(?<=[${CJK}])\\s*\\.(?=\\s|[${CJK}])`, 'gu'), '，');
+          t = t.replace(/﹔/g, '；');
+          // 括號 → 停頓；引號、書名號 → 去除
+          t = t.replace(/[（()）【】〔〕\[\]]/g, '，');
+          t = t.replace(/[「」『』《》〈〉＜＞<>"“”]/g, '');
+          // 整理重複標點與空白
+          t = t.replace(/([，、；：])[，、；：]+/g, '$1');
+          t = t.replace(/([。！？])[，、；：]+/g, '$1');
+          t = t.replace(/^[，、；：\s]+/gm, '').replace(/[ \t\u3000]+/g, ' ');
+          return t;
+        }
+        
+        // 一律先轉經文章節，再清理符號
+        function prepareSpeechText(text){
+          return sanitizeForSpeech(convertReferenceToSpeech(text.replace(/<[^>]*>/g, '')));
+        }
+        
+
+        function toggleSpeech() {
+            if (isPlaying) {
+                stopSpeech();
+                return;
+            }
+
+            stopSpeech();
+
+            const entry = dbEntries[currentIndex];
+            const spokenTitle = prepareSpeechText(entry.verseRef);
+            const cleanScripture = prepareSpeechText(entry.scripture);
+            // 結尾兩行合成同一句，避免「歡迎轉載」單獨成句時被語音引擎讀錯
+            const cleanReflection = prepareSpeechText(entry.reflection)
+                .replace(/鄭澤賢傳道\s*歡迎轉載\s*$/, '鄭澤賢傳道，歡迎轉載。');
+
+            const fullText = `${spokenTitle}。${cleanScripture}。${cleanReflection}`;
+
+            // 分句；只保留真正含有文字或數字的句子，避免把純符號讀出來
+            speechQueue = (fullText.match(/[^。！？\n]+[。！？\n]*/g) || [fullText])
+                .filter(s => /[\u3400-\u9fff\u{20000}-\u{2ffff}0-9A-Za-z]/u.test(s));
+
+            isPlaying = true;
+            document.getElementById('playText').textContent = '停止朗讀';
+            playNextChunk();
+        }
+
+        function playNextChunk() {
+            if (!isPlaying) return;
+
+            if (speechQueue.length === 0) {
+                stopSpeech();
+                return;
+            }
+
+            const chunk = speechQueue.shift();
+            const utterance = new SpeechSynthesisUtterance(chunk);
+            utterance.lang = speechLang === 'yue' ? 'zh-HK' : 'zh-TW';
+            utterance.rate = 1.0;
+
+            const voice = pickVoice();
+            if (voice) {
+                utterance.voice = voice;
+                if (speechLang === 'cmn' && voice.lang) utterance.lang = voice.lang;
+            }
+
+            utterance.onend = () => {
+                playNextChunk();
+            };
+
+            utterance.onerror = () => {
+                stopSpeech();
+            };
+
+            synth.speak(utterance);
+        }
+
+        function stopSpeech() {
+            isPlaying = false;
+            speechQueue = [];
+            if (synth) {
+                synth.cancel();
+            }
+            const playTextEl = document.getElementById('playText');
+            if (playTextEl) {
+                playTextEl.textContent = '聆聽整段';
+            }
+        }
+    </script>
+</body>
+</html>
